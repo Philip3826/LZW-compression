@@ -2,7 +2,7 @@ cmake_minimum_required (VERSION 3.13)
 
 project ("Simple CMake Template" VERSION 1.0)
 
-set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 #
@@ -24,7 +24,7 @@ target_sources(
 	PRIVATE
 		"src/library.cpp"
 		"src/library.h"
- "src/compressor.h" "src/compressor.cpp")
+ "src/Compressor.h" "src/compressor.cpp" "src/hashMap.h" "src/LzwFile.h")
 
 
 # Executable target for the application
@@ -42,7 +42,7 @@ target_sources(
 	application
 	PRIVATE
 		"src/application.cpp"
- "src/compressor.h" "src/compressor.cpp")
+ "src/Compressor.h" "src/compressor.cpp" "src/hashMap.h" "src/LzwFile.h")
 
 
 #
@@ -77,7 +77,7 @@ target_sources(
 	unit-tests
 	PRIVATE
 		"test/library_test.cpp"
- "src/compressor.h" "src/compressor.cpp")
+ "src/Compressor.h" "src/compressor.cpp" "src/hashMap.h" "src/LzwFile.h")
 
 
 # Automatically register all tests

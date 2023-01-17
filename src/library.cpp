@@ -1,11 +1,9 @@
 #include "library.h"
 
-//std::ofstream& compress(std::ofstream& file,std::string& fileAddress)
-//{
-//	
-//	//std::ofstream out(, std::ios::binary);
-//
-//}
+void compress(std::string& fileAddress)
+{
+	
+}
 
 std::string extractFilePath(std::string& fileAddress)
 {
