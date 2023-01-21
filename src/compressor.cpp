@@ -15,7 +15,6 @@ std::vector<uint16_t> Compressor::compress(std::filesystem::path filePath)
 		else
 		{
 			 auto output = dictionary.find(currStr);
-			 std::cout << output->second << " ";
 			 compressedContents.push_back(output->second);
 			 if (nextKey < 4096)
 			 {
@@ -26,7 +25,6 @@ std::vector<uint16_t> Compressor::compress(std::filesystem::path filePath)
 		}
 	}
 	auto output = dictionary.find(currStr);
-	std::cout << output->second;
 	compressedContents.push_back(output->second);
 	return compressedContents;
 }

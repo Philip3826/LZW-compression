@@ -1,12 +1,13 @@
 #include "library.h"
 #include "Compressor.h"
+#include "LzwFile.h"
 #include <iostream>
 int main()
 {
-	std::filesystem::path test;
-	std::cin >> test;
+	/*std::filesystem::path test;
+	std::cin >> test;*/
 	Compressor comp;
-	std::vector<uint16_t> result = comp.compress(test);
+	/*std::vector<uint16_t> result = comp.compress(test);
 	std::string decompress = comp.decompress(test, result);
 	std::ofstream fs("C:\\Users\\phili\\Desktop\\dec.txt", std::ios::binary);
 	if (fs.is_open())
@@ -16,6 +17,9 @@ int main()
 			fs.write(reinterpret_cast<const char*>(&*it), sizeof(uint16_t));
 		}
 	}
-	std::cout << decompress;
+	std::cout << decompress;*/
+	std::filesystem::path test = ("C:\\Users\\phili\\Desktop\\mc.txt");
+	LzwFile testLZW(test);
+	std::cout << testLZW.compressedPercentage;
 	return 0;
 }

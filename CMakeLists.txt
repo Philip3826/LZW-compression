@@ -24,7 +24,7 @@ target_sources(
 	PRIVATE
 		"src/library.cpp"
 		"src/library.h"
- "src/Compressor.h" "src/compressor.cpp" "src/hashMap.h" "src/LzwFile.h")
+ "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp")
 
 
 # Executable target for the application
@@ -42,7 +42,7 @@ target_sources(
 	application
 	PRIVATE
 		"src/application.cpp"
- "src/Compressor.h" "src/compressor.cpp" "src/hashMap.h" "src/LzwFile.h")
+ "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp")
 
 
 #
@@ -77,7 +77,7 @@ target_sources(
 	unit-tests
 	PRIVATE
 		"test/library_test.cpp"
- "src/Compressor.h" "src/compressor.cpp" "src/hashMap.h" "src/LzwFile.h")
+ "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp")
 
 
 # Automatically register all tests
