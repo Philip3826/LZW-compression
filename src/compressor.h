@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <unordered_map>
+#include <functional>
 class Compressor 
 {
 public:

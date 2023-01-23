@@ -1,25 +1,17 @@
 #include "library.h"
 #include "Compressor.h"
 #include "LzwFile.h"
+#include "ArchiveHandler.h"
 #include <iostream>
 int main()
 {
-	/*std::filesystem::path test;
-	std::cin >> test;*/
-	Compressor comp;
-	/*std::vector<uint16_t> result = comp.compress(test);
-	std::string decompress = comp.decompress(test, result);
-	std::ofstream fs("C:\\Users\\phili\\Desktop\\dec.txt", std::ios::binary);
-	if (fs.is_open())
-	{
-		for (std::vector<uint16_t>::iterator it = result.begin(); it != result.end(); it++)
-		{
-			fs.write(reinterpret_cast<const char*>(&*it), sizeof(uint16_t));
-		}
-	}
-	std::cout << decompress;*/
-	std::filesystem::path test = ("C:\\Users\\phili\\Desktop\\mc.txt");
-	LzwFile testLZW(test);
-	std::cout << testLZW.compressedPercentage;
+	ArchiveHandler handler;
+	std::filesystem::path one("C:\\Users\\phili\\Desktop\\mc.txt");
+	std::filesystem::path two("C:\\Users\\phili\\Desktop\\themes.txt");
+	std::filesystem::path three("C:\\Users\\phili\\Desktop\\dump.txt");
+	std::filesystem::path arch("C:\\Users\\phili\\Desktop\\dec.txt");
+	std::vector<std::filesystem::path> v{one,two,three};
+	handler.createArchive(arch, v);
+	handler.extractArchive("C:\\Users\\phili\\Desktop", arch);
 	return 0;
 }
