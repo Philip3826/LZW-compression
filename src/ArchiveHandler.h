@@ -10,4 +10,5 @@ public:
 	void extractArchive(std::filesystem::path destination, std::filesystem::path archive);
 private:
 	void compressDirectory(std::filesystem::path root,std::filesystem::path directoryPath,std::ofstream& archive);
+	void writeFileBlock(LzwFile file,std::string name ,std::ofstream& archive);
 };

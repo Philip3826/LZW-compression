@@ -8,19 +8,8 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 		if (std::filesystem::is_regular_file(file))
 		{
 			LzwFile compressedCurrent(file);
-			std::size_t nameLength = compressedCurrent.filePath.string().length();
 			std::string name = compressedCurrent.filePath.filename().string();
-			std::size_t compressedLength = compressedCurrent.contents.size();
-			std::size_t checkSum = (std::size_t)compressedCurrent.checkSum * 100;
-			archive.write(reinterpret_cast<const char*>(&checkSum), sizeof(size_t));
-			archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
-			archive.write(name.c_str(), sizeof(char) * nameLength);
-			archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
-			for (std::vector<uint16_t>::iterator ft = compressedCurrent.contents.begin(); ft != compressedCurrent.contents.end(); ft++)
-			{
-				archive.write(reinterpret_cast<const char*>(&*ft), sizeof(uint16_t));
-			}
-			
+			writeFileBlock(compressedCurrent, name, archive);
 		}
 		if( std::filesystem::is_directory(file))
 		{
@@ -91,21 +80,7 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		{
 			LzwFile compressedCurrent(file);
 			compressedCurrent.filePath = root / compressedCurrent.filePath.filename();
-			std::size_t nameLength = compressedCurrent.filePath.string().length();
-			std::string name = compressedCurrent.filePath.string();
-			std::cout << name;
-			std::size_t compressedLength = compressedCurrent.contents.size();
-			std::size_t checkSum = (std::size_t)compressedCurrent.checkSum * 100;
-
-			archive.write(reinterpret_cast<const char*>(&checkSum), sizeof(size_t));
-			archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
-			archive.write(name.c_str(), sizeof(char) * nameLength);
-			archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
-
-			for (std::vector<uint16_t>::iterator ft = compressedCurrent.contents.begin(); ft != compressedCurrent.contents.end(); ft++)
-			{
-				archive.write(reinterpret_cast<const char*>(&*ft), sizeof(uint16_t));
-			}
+			writeFileBlock(compressedCurrent, compressedCurrent.filePath.string(), archive);
 		}
 		
 		if (std::filesystem::is_directory(file))
@@ -114,5 +89,20 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 			newParent = root / newParent.filename();
 			compressDirectory(newParent,file.path(), archive);
 		}
+	}
+}
+// To do : change it so we can get the name from the file
+void ArchiveHandler::writeFileBlock(LzwFile file, std::string name ,std::ofstream& archive)
+{
+	std::size_t nameLength = name.length();
+	std::size_t compressedLength = file.contents.size();
+	std::size_t checkSum = (std::size_t)file.checkSum * 100;
+	archive.write(reinterpret_cast<const char*>(&checkSum), sizeof(size_t));
+	archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
+	archive.write(name.c_str(), sizeof(char) * nameLength);
+	archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
+	for (std::vector<uint16_t>::iterator ft = file.contents.begin(); ft != file.contents.end(); ft++)
+	{
+		archive.write(reinterpret_cast<const char*>(&*ft), sizeof(uint16_t));
 	}
 }

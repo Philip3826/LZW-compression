@@ -13,9 +13,7 @@ int main()
 	std::filesystem::path arch("C:\\Users\\phili\\Desktop\\dec.txt");
 	std::vector<std::filesystem::path> v{one,two,three,emp};
 	
-	//handler.createArchive(arch, v);
-	LzwFile file(three);
-	std::cout << file.checkSum;
+	handler.createArchive(arch, v);
 	//handler.extractArchive("C:\\Users\\phili\\Desktop", arch);
 	return 0;
 }
