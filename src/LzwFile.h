@@ -8,9 +8,11 @@ struct LzwFile {
 	LzwFile(std::filesystem::path filePath) : filePath(filePath)
 	{
 		contents = comp.compress(filePath);
+		checkSum = contents[contents.size() - 1];
+		contents.pop_back();
 		compressedPercentage =(double)std::filesystem::file_size(filePath) / (double)(contents.size() * sizeof(uint16_t));
 	}
-	LzwFile(std::vector<uint16_t> compressedContents) // to do later , fix the compressed percentage
+	LzwFile(std::vector<uint16_t> compressedContents, std::size_t checkSum) : checkSum(checkSum)// to do later , fix the compressed percentage
 	{
 		contents = compressedContents;
 

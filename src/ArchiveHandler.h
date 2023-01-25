@@ -9,5 +9,5 @@ public:
 	void createArchive(std::filesystem::path newArchivePath, std::vector<std::filesystem::path> files);
 	void extractArchive(std::filesystem::path destination, std::filesystem::path archive);
 private:
-
+	void compressDirectory(std::filesystem::path root,std::filesystem::path directoryPath,std::ofstream& archive);
 };
