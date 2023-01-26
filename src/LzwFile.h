@@ -3,8 +3,9 @@
 #include <vector>
 #include <functional>
 #include "Compressor.h"
-struct LzwFile {
+class LzwFile {
 
+public:
 	LzwFile(std::filesystem::path filePath) : filePath(filePath)
 	{
 		contents = comp.compress(filePath);
@@ -15,6 +16,11 @@ struct LzwFile {
 	LzwFile(std::vector<uint16_t> compressedContents, std::size_t checkSum) : checkSum(checkSum)// to do later , fix the compressed percentage
 	{
 		contents = compressedContents;
+
+	}
+	LzwFile(const LzwFile& other) : filePath(other.filePath),contents(other.contents),
+	compressedPercentage(other.compressedPercentage),checkSum(other.checkSum)
+	{
 
 	}
 	void print()
