@@ -21,32 +21,32 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 
 void ArchiveHandler::extractArchive(std::filesystem::path destination, std::filesystem::path archivePath)
 {
-	std::ifstream archive(archivePath, std::ios::binary);
-	if (!archive.is_open())
-		throw std::runtime_error("Could not open archive!");
+	//std::ifstream archive(archivePath, std::ios::binary);
+	//if (!archive.is_open())
+	//	throw std::runtime_error("Could not open archive!");
 
-	while (!archive.eof())
-	{
-		std::size_t checkSum;
-		archive.read(reinterpret_cast<char*>(&checkSum), sizeof(size_t));
-		std::size_t nameLength;
-		archive.read(reinterpret_cast<char*> (&nameLength), sizeof(size_t));
-		std::string name;
-		char* buffer = new char[nameLength];
-		archive.read(buffer, nameLength * sizeof(char));
-		name.assign(buffer);
-		delete[] buffer;
-		std::filesystem::path filePath(name);
-		std::size_t contentLength;
-		archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
-		std::vector<uint16_t> compressedContents(contentLength);
-		for (std::vector<uint16_t>::iterator ft = compressedContents.begin(); ft != compressedContents.end() ; ft++)
-		{
-			archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
-		}
-		LzwFile file(compressedContents,checkSum); // TO DO : make a verification on the checkSum
-		std::cout << file.comp.decompress(archivePath,compressedContents);
-	}
+	//while (!archive.eof())
+	//{
+	//	std::size_t checkSum;
+	//	archive.read(reinterpret_cast<char*>(&checkSum), sizeof(size_t));
+	//	std::size_t nameLength;
+	//	archive.read(reinterpret_cast<char*> (&nameLength), sizeof(size_t));
+	//	std::string name;
+	//	char* buffer = new char[nameLength];
+	//	archive.read(buffer, nameLength * sizeof(char));
+	//	name.assign(buffer);
+	//	delete[] buffer;
+	//	std::filesystem::path filePath(name);
+	//	std::size_t contentLength;
+	//	archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+	//	std::vector<uint16_t> compressedContents(contentLength);
+	//	for (std::vector<uint16_t>::iterator ft = compressedContents.begin(); ft != compressedContents.end() ; ft++)
+	//	{
+	//		archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
+	//	}
+	//	LzwFile file(compressedContents,checkSum); // TO DO : make a verification on the checkSum
+	//	std::cout << file.comp.decompress(archivePath,compressedContents);
+	//}
 }
 
 /**
@@ -57,12 +57,32 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
 */
 void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstream& archive,std::filesystem::path destination)
 {
+	if (!archive.is_open()) throw std::runtime_error("Error with the compression");
 	std::size_t readLocationStart = findFile(pathInArchive, archive);
-	try
+	bool isDir;
+	archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+	if (isDir)
 	{
+		std::filesystem::path newDir = destination / pathInArchive.filename();
+		std::filesystem::create_directory(newDir);
+		unzipDirectory(newDir, archive);
+	}
+	else
+	{
+		LzwFile file = readFileBlock(pathInArchive, archive);
+		
+		std::string decompressed = file.comp.decompress(file.contents);
+		std::filesystem::path newAddress = destination / pathInArchive.filename();
+		std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
+		if (newFile.good())
+		{
+			newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
+			newFile.close();
+		}
 		
 	}
 }
+
 
  // TO DO : change argument root name
 void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesystem::path directoryPath , std::ofstream& archive)
@@ -84,7 +104,6 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		isEmpty = 0;
 		archive.write(reinterpret_cast<const char*>(&isEmpty), sizeof(bool));
 		return;
-
 	}
 	else archive.write(reinterpret_cast<const char*>(&isEmpty), sizeof(bool));
 
@@ -107,34 +126,51 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		}
 	}
 }
-
+// To do : add compressed percentage
 void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 {
 	std::string name = file.filePath.string();
 	std::size_t nameLength = name.length();
 	std::size_t compressedLength = file.contents.size();
-	std::size_t checkSum = (std::size_t)file.checkSum * 100;
 	bool isDir = false;
 	archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
 	archive.write(name.c_str(), sizeof(char) * nameLength);
 	archive.write(reinterpret_cast<const char*>(&isDir), sizeof(bool));
-	archive.write(reinterpret_cast<const char*>(&checkSum), sizeof(size_t));
+	archive.write(reinterpret_cast<const char*>(&file.checkSum), sizeof(size_t));
 	archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
 	for (std::vector<uint16_t>::iterator ft = file.contents.begin(); ft != file.contents.end(); ft++)
 	{
 		archive.write(reinterpret_cast<const char*>(&*ft), sizeof(uint16_t));
 	}
 }
-LzwFile ArchiveHandler::readFileBlock(std::size_t gpointer,std::ifstream& archive)
-{
-	archive.seekg(gpointer,std::ios::beg);
-	std::size_t nameLength;
-	archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
-	char* buffer = new char[nameLength + 1];
-	archive.read(buffer, sizeof(char) * nameLength);
 
-	return LzwFile();
+
+LzwFile ArchiveHandler::readFileBlock(std::filesystem::path filePath,std::ifstream& archive)
+{
+	
+	std::size_t checkSum;
+	std::size_t contentLength;
+	archive.read(reinterpret_cast<char*>(&checkSum), sizeof(size_t));
+	archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+	std::vector<uint16_t> compressedContents(contentLength);
+
+	for (std::vector<uint16_t>::iterator ft = compressedContents.begin(); ft != compressedContents.end() ; ft++)
+	{
+		archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
+		std::cout << *ft <<" ";
+	}
+	return LzwFile(filePath, 0, compressedContents, checkSum);
 }
+
+void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::ifstream& archive)
+{
+	bool isEmpty;
+	archive.read(reinterpret_cast<char*>(&isEmpty), sizeof(bool));
+	if (isEmpty) return;
+
+}
+
+
 /**
  * @brief - finds the starting position of the fileblock 
  * @param filePath - file we want to file
@@ -149,17 +185,15 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 	while (!archive.eof())
 	{
 		std::size_t nameLength;
-		std::string name;
 		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
-		char* buffer = new char[nameLength + 1];
-		archive.read(buffer, nameLength * sizeof(char));
-		buffer[nameLength] = '\0';
-		name.assign(buffer);
-		delete[] buffer;
+		std::string name;
+		name.resize(nameLength);
+		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
 
-		if (filePath == name)
+		//std::cout << "After name read:" << archive.tellg() << '\n';
+		if (filePath.string() == name.c_str())
 		{
-			try
+			/*try
 			{
 				archive.seekg(-(sizeof(size_t) + nameLength*sizeof(char)), std::ios::cur);
 			}
@@ -167,7 +201,7 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 			{
 				std::cerr << "Error with seeking in the file" << e.what() << '\n';
 				return archive.end;
-			}
+			}*/
 			return archive.tellg();
 		}
 		bool isDir;
@@ -176,7 +210,8 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 		{
 			try
 			{
-				archive.seekg(sizeof(bool) + sizeof(size_t), std::ios::cur);
+				archive.seekg(sizeof(bool), std::ios::cur);
+				// to do  add checksum here
 			}
 			catch (std::ios_base::failure& e)
 			{
@@ -188,10 +223,10 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 		{
 			try
 			{
-				archive.seekg(sizeof(size_t), std::ios::cur);
+				archive.seekg(sizeof(size_t), std::ios::cur); // skipping checkSum value
 				std::size_t contentLength;
 				archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
-				archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur);
+				archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
 			}
 			catch (std::ios_base::failure& e)
 			{

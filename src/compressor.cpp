@@ -42,7 +42,7 @@ std::vector<uint16_t> Compressor::compress(std::filesystem::path filePath)
  * @param compressedContent - vector with the compressed data from a file in the form of coded uint16_t numbers 
  * @return string with the decompressed contents
 */
-std::string Compressor::decompress(std::filesystem::path filePath, std::vector<uint16_t> compressedContent)
+std::string Compressor::decompress(std::vector<uint16_t> compressedContent)
 {
 	
 	std::unordered_map<uint16_t, std::string> dictionary;
@@ -55,7 +55,7 @@ std::string Compressor::decompress(std::filesystem::path filePath, std::vector<u
 
 	for (std::vector<uint16_t>::iterator it = compressedContent.begin() + 1; it != compressedContent.end(); it++)
 	{
-		current = (uint16_t)*it;
+		current = *it;
 		std::string translationResult;
 		auto keyValuePair = dictionary.find(current);
 
