@@ -13,6 +13,6 @@ private:
 	void compressDirectory(std::filesystem::path root,std::filesystem::path directoryPath,std::ofstream& archive);
 	void writeFileBlock(LzwFile file, std::ofstream& archive);
 	LzwFile readFileBlock(std::filesystem::path filelPath ,std::ifstream& archive);
-	void unzipDirectory(std::filesystem::path destination, std::ifstream& archive);
+	void unzipDirectory(std::filesystem::path destination,std::filesystem::path pathInFolder,std::ifstream& archive);
 	std::size_t findFile(std::filesystem::path filePath, std::ifstream& archive);
 };

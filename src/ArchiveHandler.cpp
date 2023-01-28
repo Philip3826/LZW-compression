@@ -9,7 +9,15 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 		{
 			LzwFile compressedCurrent(file);
 			compressedCurrent.filePath = compressedCurrent.filePath.filename();
-			writeFileBlock(compressedCurrent, archive);
+			try 
+			{
+				writeFileBlock(compressedCurrent, archive);
+			}
+			catch (std::ios_base::failure& e)
+			{
+				std::cerr << "Error with writing in the file" << e.what() << '\n';
+				return;
+			}
 		}
 		if( std::filesystem::is_directory(file))
 		{
@@ -21,32 +29,41 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 
 void ArchiveHandler::extractArchive(std::filesystem::path destination, std::filesystem::path archivePath)
 {
-	//std::ifstream archive(archivePath, std::ios::binary);
-	//if (!archive.is_open())
-	//	throw std::runtime_error("Could not open archive!");
+	std::ifstream archive(archivePath, std::ios::binary);
+	if (!archive.is_open())
+		throw std::runtime_error("Could not open archive!");
+	std::size_t fileSize = std::filesystem::file_size(archivePath);
 
-	//while (!archive.eof())
-	//{
-	//	std::size_t checkSum;
-	//	archive.read(reinterpret_cast<char*>(&checkSum), sizeof(size_t));
-	//	std::size_t nameLength;
-	//	archive.read(reinterpret_cast<char*> (&nameLength), sizeof(size_t));
-	//	std::string name;
-	//	char* buffer = new char[nameLength];
-	//	archive.read(buffer, nameLength * sizeof(char));
-	//	name.assign(buffer);
-	//	delete[] buffer;
-	//	std::filesystem::path filePath(name);
-	//	std::size_t contentLength;
-	//	archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
-	//	std::vector<uint16_t> compressedContents(contentLength);
-	//	for (std::vector<uint16_t>::iterator ft = compressedContents.begin(); ft != compressedContents.end() ; ft++)
-	//	{
-	//		archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
-	//	}
-	//	LzwFile file(compressedContents,checkSum); // TO DO : make a verification on the checkSum
-	//	std::cout << file.comp.decompress(archivePath,compressedContents);
-	//}
+	while (archive.tellg() != fileSize)
+	{
+		std::size_t nameLength;
+		std::string name;
+		std::cout << archive.tellg() << " ";
+		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+		name.resize(nameLength);
+		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+		bool isDir;
+		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+		std::filesystem::path pathInArchive = name;
+		if (isDir)
+		{
+			std::filesystem::path newDir = destination / pathInArchive.filename();
+			std::filesystem::create_directory(newDir);
+			unzipDirectory(newDir, pathInArchive, archive);
+		}
+		else
+		{
+			LzwFile file = readFileBlock(pathInArchive, archive);
+			std::string decompressed = file.comp.decompress(file.contents);
+			std::filesystem::path newAddress = destination / pathInArchive.filename();
+			std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
+			if (newFile.good())
+			{
+				newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
+				newFile.close();
+			}
+		}
+	}
 }
 
 /**
@@ -65,7 +82,7 @@ void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstrea
 	{
 		std::filesystem::path newDir = destination / pathInArchive.filename();
 		std::filesystem::create_directory(newDir);
-		unzipDirectory(newDir, archive);
+		unzipDirectory(newDir,pathInArchive,archive); // add arg
 	}
 	else
 	{
@@ -96,12 +113,12 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 	archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
 	archive.write(pathInArchive.string().c_str(), sizeof(char) * nameLength);
 	archive.write(reinterpret_cast<const char*>(&isDir), sizeof(bool));
-	bool isEmpty = true;
+	bool isEmpty = false;
 	
 	if (std::filesystem::is_empty(directoryPath))
 	{
 		// what checkSum should i do for empty dirs?
-		isEmpty = 0;
+		isEmpty = true;
 		archive.write(reinterpret_cast<const char*>(&isEmpty), sizeof(bool));
 		return;
 	}
@@ -115,7 +132,15 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		{
 			LzwFile compressedCurrent(file);
 			compressedCurrent.filePath = root / compressedCurrent.filePath.filename();
-			writeFileBlock(compressedCurrent, archive);
+			try
+			{
+				writeFileBlock(compressedCurrent, archive);
+			}
+			catch (std::ios_base::failure& e)
+			{
+				std::cerr << "Error with writing in the file" << e.what() << '\n';
+				return;
+			}
 		}
 		
 		if (std::filesystem::is_directory(file))
@@ -133,6 +158,7 @@ void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 	std::size_t nameLength = name.length();
 	std::size_t compressedLength = file.contents.size();
 	bool isDir = false;
+	
 	archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
 	archive.write(name.c_str(), sizeof(char) * nameLength);
 	archive.write(reinterpret_cast<const char*>(&isDir), sizeof(bool));
@@ -157,16 +183,55 @@ LzwFile ArchiveHandler::readFileBlock(std::filesystem::path filePath,std::ifstre
 	for (std::vector<uint16_t>::iterator ft = compressedContents.begin(); ft != compressedContents.end() ; ft++)
 	{
 		archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
-		std::cout << *ft <<" ";
 	}
 	return LzwFile(filePath, 0, compressedContents, checkSum);
 }
 
-void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::ifstream& archive)
+void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::filesystem::path pathInFolder, std::ifstream& archive)
 {
 	bool isEmpty;
 	archive.read(reinterpret_cast<char*>(&isEmpty), sizeof(bool));
 	if (isEmpty) return;
+	
+	//std::size_t checksum;
+	//archive.read(reinterpret_cast<char*>(&checksum),sizeof(size_t));
+	while (!archive.eof())
+	{
+		std::size_t nameLength;
+		std::string name;
+		std::size_t positionBeforeName = archive.tellg();
+		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+		name.resize(nameLength);
+		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+		std::filesystem::path pathInArchive = name;
+		std::string path = pathInArchive.parent_path().string();
+		if (path != pathInFolder) // fix this check
+		{
+			archive.seekg(positionBeforeName);
+			break;
+		}
+		bool isDir;
+		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+		if (isDir)
+		{
+			std::filesystem::path newDir = destination / pathInArchive.filename();
+			std::filesystem::create_directory(newDir);
+			unzipDirectory(newDir, pathInFolder / pathInArchive.filename(), archive); //add arg
+		}
+		else
+		{
+			LzwFile file = readFileBlock(pathInArchive, archive);
+			std::string decompressed = file.comp.decompress(file.contents);
+			std::filesystem::path newAddress = destination / pathInArchive.filename();
+			std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
+			if (newFile.good())
+			{
+				newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
+				newFile.close();
+			}
+		}
+	}
+	
 
 }
 
