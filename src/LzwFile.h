@@ -11,7 +11,8 @@ public:
 		contents = comp.compress(filePath);
 		checkSum = contents[contents.size() - 1];
 		contents.pop_back();
-		compressedPercentage =(double)std::filesystem::file_size(filePath) / (double)(contents.size() * sizeof(uint16_t));
+		compressedPercentage = 100.0 * ((double)(contents.size() * sizeof(uint16_t)) / (double)std::filesystem::file_size(filePath));
+		std::cout << filePath << " " << (contents.size() * sizeof(uint16_t)) << " " << std::filesystem::file_size(filePath) << '\n';
 	}
 	LzwFile(std::filesystem::path filePath,double perc,std::vector<uint16_t> compressedContents, std::size_t checkSum) : 
 		filePath(filePath),contents(compressedContents),checkSum(checkSum),compressedPercentage(perc)
@@ -38,7 +39,7 @@ public:
 	}
 	std::filesystem::path filePath;
 	std::vector<uint16_t> contents;
-	double compressedPercentage;
+	uint16_t compressedPercentage;
 	std::size_t checkSum{ 0 };
 	Compressor comp;
 };

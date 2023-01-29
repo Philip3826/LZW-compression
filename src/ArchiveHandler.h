@@ -9,6 +9,7 @@ public:
 	void createArchive(std::filesystem::path newArchivePath, std::vector<std::filesystem::path> files);
 	void extractArchive(std::filesystem::path destination, std::filesystem::path archive);
 	void unzipFile(std::filesystem::path pathInArchive, std::ifstream& archive, std::filesystem::path  destination);
+	void printInfo(std::filesystem::path archivePath);
 private:
 	void compressDirectory(std::filesystem::path root,std::filesystem::path directoryPath,std::ofstream& archive);
 	void writeFileBlock(LzwFile file, std::ofstream& archive);

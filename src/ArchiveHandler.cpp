@@ -38,7 +38,6 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
 	{
 		std::size_t nameLength;
 		std::string name;
-		std::cout << archive.tellg() << " ";
 		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
 		name.resize(nameLength);
 		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
@@ -97,6 +96,40 @@ void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstrea
 			newFile.close();
 		}
 		
+	}
+}
+
+void ArchiveHandler::printInfo(std::filesystem::path archivePath)
+{
+	std::ifstream archive(archivePath, std::ios::binary);
+	if (!archive.is_open())
+		throw std::runtime_error("Error opening the archive");
+	
+	std::size_t fileSize = std::filesystem::file_size(archivePath);
+	while (archive.tellg() != fileSize)
+	{
+		std::size_t nameLength;
+		std::string name;
+		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+		name.resize(nameLength);
+		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+		bool isDir;
+		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+		if (isDir)
+		{
+			archive.seekg(sizeof(bool), std::ios::cur);
+			std::cout << "Type: Folder , Name: " << name << std::endl;
+		}
+		else
+		{
+			uint16_t comprPerc;
+			archive.read(reinterpret_cast<char*>(&comprPerc), sizeof(uint16_t));
+			archive.seekg(sizeof(size_t), std::ios::cur); //skipping checkSum
+			std::size_t contentLength;
+			archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+			archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
+			std::cout << "Type: File , Name: " << name << " Compressed percentage: " << comprPerc << std::endl;
+		}
 	}
 }
 
@@ -162,6 +195,8 @@ void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 	archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
 	archive.write(name.c_str(), sizeof(char) * nameLength);
 	archive.write(reinterpret_cast<const char*>(&isDir), sizeof(bool));
+	archive.write(reinterpret_cast<const char*>(&file.compressedPercentage), sizeof(uint16_t));
+	//std::cout << file.compressedPercentage << " ";
 	archive.write(reinterpret_cast<const char*>(&file.checkSum), sizeof(size_t));
 	archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
 	for (std::vector<uint16_t>::iterator ft = file.contents.begin(); ft != file.contents.end(); ft++)
@@ -176,6 +211,8 @@ LzwFile ArchiveHandler::readFileBlock(std::filesystem::path filePath,std::ifstre
 	
 	std::size_t checkSum;
 	std::size_t contentLength;
+	uint16_t comprPerc;
+	archive.read(reinterpret_cast<char*>(&comprPerc), sizeof(uint16_t));
 	archive.read(reinterpret_cast<char*>(&checkSum), sizeof(size_t));
 	archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
 	std::vector<uint16_t> compressedContents(contentLength);
@@ -193,8 +230,6 @@ void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::file
 	archive.read(reinterpret_cast<char*>(&isEmpty), sizeof(bool));
 	if (isEmpty) return;
 	
-	//std::size_t checksum;
-	//archive.read(reinterpret_cast<char*>(&checksum),sizeof(size_t));
 	while (!archive.eof())
 	{
 		std::size_t nameLength;
@@ -205,7 +240,7 @@ void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::file
 		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
 		std::filesystem::path pathInArchive = name;
 		std::string path = pathInArchive.parent_path().string();
-		if (path != pathInFolder) // fix this check
+		if (path != pathInFolder) 
 		{
 			archive.seekg(positionBeforeName);
 			break;
@@ -216,7 +251,7 @@ void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::file
 		{
 			std::filesystem::path newDir = destination / pathInArchive.filename();
 			std::filesystem::create_directory(newDir);
-			unzipDirectory(newDir, pathInFolder / pathInArchive.filename(), archive); //add arg
+			unzipDirectory(newDir, pathInFolder / pathInArchive.filename(), archive); 
 		}
 		else
 		{
@@ -256,19 +291,7 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
 
 		//std::cout << "After name read:" << archive.tellg() << '\n';
-		if (filePath.string() == name.c_str())
-		{
-			/*try
-			{
-				archive.seekg(-(sizeof(size_t) + nameLength*sizeof(char)), std::ios::cur);
-			}
-			catch (std::ios_base::failure& e)
-			{
-				std::cerr << "Error with seeking in the file" << e.what() << '\n';
-				return archive.end;
-			}*/
-			return archive.tellg();
-		}
+		if (filePath.string() == name.c_str()) return archive.tellg();
 		bool isDir;
 		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
 		if (isDir)
@@ -276,7 +299,6 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 			try
 			{
 				archive.seekg(sizeof(bool), std::ios::cur);
-				// to do  add checksum here
 			}
 			catch (std::ios_base::failure& e)
 			{
@@ -288,6 +310,7 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 		{
 			try
 			{
+				archive.seekg(sizeof(uint16_t), std::ios::cur); // skipping compressed percentage value
 				archive.seekg(sizeof(size_t), std::ios::cur); // skipping checkSum value
 				std::size_t contentLength;
 				archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));

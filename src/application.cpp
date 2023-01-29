@@ -10,13 +10,17 @@ int main()
 	std::filesystem::path two("C:\\Users\\phili\\Desktop\\themes.txt");
 	std::filesystem::path three("C:\\Users\\phili\\Desktop\\dump.txt");
 	std::filesystem::path four("C:\\Users\\phili\\Desktop\\Bulgarian.txt");
+	std::filesystem::path five("C:\\Users\\phili\\Desktop\\cppDump.txt");
+	std::filesystem::path six("C:\\Users\\phili\\Desktop\\mc2.txt");
 	std::filesystem::path emp("C:\\Users\\phili\\Desktop\\empty");
 	std::filesystem::path arch("C:\\Users\\phili\\Desktop\\dec.txt");
 	std::filesystem::path ext("C:\\Users\\phili\\Desktop\\extract");
-	std::vector<std::filesystem::path> v{one,two,three,emp,four};
+
+	std::vector<std::filesystem::path> v{one,two,three,emp,four,five,six};
 	std::ifstream archive(arch, std::ios::binary);
 	handler.createArchive(arch, v);
 	//handler.unzipFile("empty", archive, ext); //error when searching folders
-	handler.extractArchive("C:\\Users\\phili\\Desktop\\extract", arch);
+	//handler.extractArchive("C:\\Users\\phili\\Desktop\\extract", arch);
+	handler.printInfo(arch);
 	return 0;
 }
