@@ -22,9 +22,9 @@ set_target_properties(samplelib PROPERTIES OUTPUT_NAME "sample")
 target_sources(
 	samplelib
 	PRIVATE
-		"src/library.cpp"
-		"src/library.h"
- "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp" "src/ActionHandler.h")
+		
+		
+ "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp" "src/ActionHandler.h" "src/LzwFile.cpp")
 
 
 # Executable target for the application
@@ -42,7 +42,7 @@ target_sources(
 	application
 	PRIVATE
 		"src/application.cpp"
- "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp" "src/ActionHandler.h")
+ "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp" "src/ActionHandler.h" "src/LzwFile.cpp")
 
 
 #
@@ -77,7 +77,7 @@ target_sources(
 	unit-tests
 	PRIVATE
 		"test/library_test.cpp"
- "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp" "src/ActionHandler.h")
+ "src/Compressor.h" "src/compressor.cpp"  "src/LzwFile.h" "src/ArchiveHandler.h" "src/ArchiveHandler.cpp" "src/ActionHandler.h" "src/LzwFile.cpp")
 
 
 # Automatically register all tests

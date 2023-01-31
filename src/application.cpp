@@ -1,7 +1,7 @@
-#include "library.h"
 #include "Compressor.h"
 #include "LzwFile.h"
 #include "ArchiveHandler.h"
+#include "ActionHandler.h"
 #include <iostream>
 int main()
 {
@@ -16,11 +16,14 @@ int main()
 	std::filesystem::path arch("C:\\Users\\phili\\Desktop\\dec.txt");
 	std::filesystem::path ext("C:\\Users\\phili\\Desktop\\extract");
 
-	std::vector<std::filesystem::path> v{one,two,three,emp,four,five,six};
-	std::ifstream archive(arch, std::ios::binary);
-	handler.createArchive(arch, v);
-	//handler.unzipFile("empty", archive, ext); //error when searching folders
-	//handler.extractArchive("C:\\Users\\phili\\Desktop\\extract", arch);
-	handler.printInfo(arch);
+	//std::vector<std::filesystem::path> v{one,two,three,emp,four,five,six};
+	////handler.createArchive(arch, v);
+	////handler.unzipFile("empty", archive, ext); //error when searching folders
+	//handler.printInfo(arch);
+	////handler.checkForCorruption(arch);
+	//handler.refreshFile(emp, "empty", arch);
+	//handler.extractArchive(ext, arch);
+	std::string h = "zip";
+	ActionHandler acc(h, "");
 	return 0;
 }

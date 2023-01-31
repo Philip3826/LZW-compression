@@ -2,13 +2,9 @@
 #include <string>
 #include <vector>
 #include <filesystem>
-
+#include "ArchiveHandler.h"
 class ActionHandler {
 
-private:
-	std::string rawCommand;
-	Action action;
-	std::vector <std::filesystem::path> arguments;
 public:
 	enum class Action
 	{
@@ -19,7 +15,17 @@ public:
 		EC,
 		ERROR,
 	};
-	ActionHandler(const std::string command) : rawCommand(command);
-	const Action() const;
+	ActionHandler(const std::string& command,char** argv);
+	~ActionHandler();
+	ActionHandler(const ActionHandler& other) = delete;
+	ActionHandler& operator = (const ActionHandler& other) = delete;
+	void executeAction();
+	const Action getAction() const;
+private:
+	void validateArguments(char** argv);
+	std::string rawCommand;
+	Action action{ Action::ERROR };
+	ArchiveHandler handler;
+	std::vector <std::filesystem::path> arguments;
 	
 };

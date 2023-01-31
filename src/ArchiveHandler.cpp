@@ -13,18 +13,25 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 			{
 				writeFileBlock(compressedCurrent, archive);
 			}
-			catch (std::ios_base::failure& e)
+			catch (const std::exception& e)
 			{
-				std::cerr << "Error with writing in the file" << e.what() << '\n';
+				std::cerr << "Error:" << e.what() << '\n';
 				return;
 			}
 		}
 		if( std::filesystem::is_directory(file))
 		{
-			compressDirectory(file.filename(),file, archive);
+			try
+			{
+				compressDirectory(file.filename(),file, archive);
+			}
+			catch(const std::exception& e)
+			{
+				std::cerr << "Error:" << e.what() << '\n';
+				return;
+			}
 		}
 	}
-	archive.close();
 }
 
 void ArchiveHandler::extractArchive(std::filesystem::path destination, std::filesystem::path archivePath)
@@ -32,36 +39,44 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
 	std::ifstream archive(archivePath, std::ios::binary);
 	if (!archive.is_open())
 		throw std::runtime_error("Could not open archive!");
-	std::size_t fileSize = std::filesystem::file_size(archivePath);
 
-	while (archive.tellg() != fileSize)
+	std::size_t fileSize = std::filesystem::file_size(archivePath);
+	try
 	{
-		std::size_t nameLength;
-		std::string name;
-		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
-		name.resize(nameLength);
-		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
-		bool isDir;
-		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
-		std::filesystem::path pathInArchive = name;
-		if (isDir)
+		while (archive.tellg() != fileSize)
 		{
-			std::filesystem::path newDir = destination / pathInArchive.filename();
-			std::filesystem::create_directory(newDir);
-			unzipDirectory(newDir, pathInArchive, archive);
-		}
-		else
-		{
-			LzwFile file = readFileBlock(pathInArchive, archive);
-			std::string decompressed = file.comp.decompress(file.contents);
-			std::filesystem::path newAddress = destination / pathInArchive.filename();
-			std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
-			if (newFile.good())
+			std::size_t nameLength;
+			std::string name;
+			archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+			name.resize(nameLength);
+			archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+			bool isDir;
+			archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+			std::filesystem::path pathInArchive = name;
+			if (isDir)
 			{
-				newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
-				newFile.close();
+				std::filesystem::path newDir = destination / pathInArchive.filename();
+				std::filesystem::create_directory(newDir);
+				unzipDirectory(newDir, pathInArchive, archive);
+			}
+			else
+			{
+				LzwFile file = readFileBlock(pathInArchive, archive);
+				std::string decompressed = file.comp.decompress(file.contents);
+				std::filesystem::path newAddress = destination / pathInArchive.filename();
+				std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
+				if (newFile.good())
+				{
+					newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
+					newFile.close();
+				}
 			}
 		}
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error:" << e.what() << '\n';
+		return;
 	}
 }
 
@@ -74,28 +89,58 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
 void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstream& archive,std::filesystem::path destination)
 {
 	if (!archive.is_open()) throw std::runtime_error("Error with the compression");
-	std::size_t readLocationStart = findFile(pathInArchive, archive);
+	try
+	{
+		std::size_t readLocationStart = findFile(pathInArchive, archive);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error:" << e.what() << '\n';
+		return;
+	}
 	bool isDir;
-	archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+	try
+	{
+		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error:" << e.what() << '\n';
+		return;
+	}
 	if (isDir)
 	{
 		std::filesystem::path newDir = destination / pathInArchive.filename();
 		std::filesystem::create_directory(newDir);
-		unzipDirectory(newDir,pathInArchive,archive); // add arg
+		try
+		{
+			unzipDirectory(newDir,pathInArchive,archive); // add arg
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "Error:" << e.what() << '\n';
+			return;
+		}
 	}
 	else
 	{
-		LzwFile file = readFileBlock(pathInArchive, archive);
-		
-		std::string decompressed = file.comp.decompress(file.contents);
-		std::filesystem::path newAddress = destination / pathInArchive.filename();
-		std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
-		if (newFile.good())
+		try
 		{
-			newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
-			newFile.close();
+			LzwFile file = readFileBlock(pathInArchive, archive);
+			std::string decompressed = file.comp.decompress(file.contents);
+			std::filesystem::path newAddress = destination / pathInArchive.filename();
+			std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
+			if (newFile.good())
+			{
+				newFile.write(decompressed.c_str(), sizeof(char) * decompressed.length());
+				newFile.close();
+			}
 		}
-		
+		catch (const std::exception& e)
+		{
+			std::cerr << "Error:" << e.what() << '\n';
+			return;
+		}
 	}
 }
 
@@ -106,31 +151,171 @@ void ArchiveHandler::printInfo(std::filesystem::path archivePath)
 		throw std::runtime_error("Error opening the archive");
 	
 	std::size_t fileSize = std::filesystem::file_size(archivePath);
-	while (archive.tellg() != fileSize)
+	try
 	{
-		std::size_t nameLength;
-		std::string name;
-		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
-		name.resize(nameLength);
-		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
-		bool isDir;
-		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
-		if (isDir)
+		while (archive.tellg() != fileSize)
 		{
-			archive.seekg(sizeof(bool), std::ios::cur);
-			std::cout << "Type: Folder , Name: " << name << std::endl;
-		}
-		else
-		{
-			uint16_t comprPerc;
-			archive.read(reinterpret_cast<char*>(&comprPerc), sizeof(uint16_t));
-			archive.seekg(sizeof(size_t), std::ios::cur); //skipping checkSum
-			std::size_t contentLength;
-			archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
-			archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
-			std::cout << "Type: File , Name: " << name << " Compressed percentage: " << comprPerc << std::endl;
+			std::size_t nameLength;
+			std::string name;
+			archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+			name.resize(nameLength);
+			archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+			bool isDir;
+			archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+			if (isDir)
+			{
+				archive.seekg(sizeof(bool), std::ios::cur);
+				std::cout << "Type:Folder, Name: " << name << std::endl;
+			}
+			else
+			{
+				uint16_t comprPerc;
+				archive.read(reinterpret_cast<char*>(&comprPerc), sizeof(uint16_t));
+				archive.seekg(sizeof(size_t), std::ios::cur); //skipping checkSum
+				std::size_t contentLength;
+				archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+				archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
+				std::cout << "Type:File, Name: " << name << ", Compressed percentage: " << comprPerc << std::endl;
+			}
 		}
 	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error:" << e.what() << '\n';
+		return;
+	}
+}
+
+/**
+ * @brief - iterates through the archive checking for corruption by summing the codes and comparing the sum with the checkSum of the file
+ * @param archivePath - path to the archive
+*/
+void ArchiveHandler::checkForCorruption(std::filesystem::path archivePath)
+{
+	std::ifstream archive(archivePath, std::ios::binary);
+	if (!archive.is_open())
+		throw std::runtime_error("Error opening the archive");
+	std::size_t fileSize = std::filesystem::file_size(archivePath);
+	bool noCorruptions = true;
+	try
+	{
+		while (fileSize != archive.tellg())
+		{
+			std::size_t nameLength;
+			std::string name;
+			archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+			name.resize(nameLength);
+			archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+			bool isDir;
+			archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+			std::filesystem::path pathInArchive = name;
+			if (isDir)
+			{
+				archive.seekg(sizeof(bool), std::ios::cur);
+			}
+			else
+			{
+				LzwFile file = readFileBlock(pathInArchive, archive);
+				if (!file.correctCheckSum())
+				{
+					std::cout << "Corrupted file: " << name << std::endl;
+					noCorruptions = false;
+				}
+			}
+		}
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error: " << e.what() << '\n';
+		return;
+	}
+
+	if (noCorruptions) std::cout << "File is good" << std::endl;
+}
+
+void ArchiveHandler::refreshFile(std::filesystem::path newFile, std::filesystem::path pathInArchive, std::filesystem::path archivePath)
+{
+	std::ifstream archiveForReading(archivePath, std::ios::binary);
+	if (!archiveForReading.is_open())
+		throw std::runtime_error("Error with opening the archive");
+	std::size_t fileStart = std::filesystem::file_size(archivePath);
+	try
+	{
+		 fileStart = findFile(pathInArchive,archiveForReading);
+	}
+	catch (const std::exception& e)
+	{
+		std::cerr << "Error:" << e.what() << '\n';
+		return;
+	}
+	
+	
+	if (fileStart == std::filesystem::file_size(archivePath))
+	{
+		std::cout << "File not found in the archive: " << std::endl;
+		return;
+	}
+	std::size_t contentsBeforeFileLength = fileStart - sizeof(size_t) - pathInArchive.string().length();
+	std::string contentsBeforeFile;
+	contentsBeforeFile.resize(contentsBeforeFileLength);
+	archiveForReading.seekg(archiveForReading.beg);
+	archiveForReading.read(const_cast<char*>(contentsBeforeFile.c_str()) , sizeof(char) * contentsBeforeFileLength);
+	archiveForReading.seekg(fileStart, archiveForReading.beg);
+	bool isDir;
+	archiveForReading.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+	if (isDir)
+	{
+		if (!std::filesystem::is_directory(newFile))
+		{
+			std::cout << "New file is not a directory";
+			return;
+		}
+
+		std::size_t endOfDir = findEndOfDir(pathInArchive.string(), archivePath, archiveForReading);
+		if (endOfDir == 0)
+		{
+			std::cout << "Couldn't find end of directory for refreshing";
+			return;
+		}
+		std::string restOfFile;
+		std::size_t restLength = std::filesystem::file_size(archivePath) - archiveForReading.tellg();
+		restOfFile.resize(restLength);
+		archiveForReading.read(const_cast<char*>(restOfFile.c_str()), sizeof(char) * restLength);
+		archiveForReading.close();
+		std::ofstream archiveForWriting(archivePath, std::ios::binary, std::ios::trunc);
+		archiveForWriting.write(contentsBeforeFile.c_str(), sizeof(char) * contentsBeforeFile.length());
+		compressDirectory(newFile.filename(), newFile, archiveForWriting);
+		archiveForWriting.write(restOfFile.c_str(), sizeof(char) * restLength);
+	}
+	else
+	{
+		if (std::filesystem::is_directory(newFile))
+		{
+			std::cout << "New file is not a regular file: ";
+			return;
+		}
+		archiveForReading.seekg(sizeof(size_t) + sizeof(uint16_t), std::ios::cur); //skipping compressedPercentage an checkSum
+		std::size_t contentLength;
+		archiveForReading.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+		archiveForReading.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
+		
+		std::string restOfFile;
+		std::size_t restLength = std::filesystem::file_size(archivePath) - archiveForReading.tellg();
+		restOfFile.resize(restLength);
+		archiveForReading.read(const_cast<char*>(restOfFile.c_str()), sizeof(char) * restLength);
+		archiveForReading.close();
+		LzwFile file(newFile);
+		std::ofstream archiveForWriting(archivePath, std::ios::binary , std::ios::trunc);
+
+		if (!archiveForWriting.is_open())
+			throw std::runtime_error("Error with opening the archive");
+
+		archiveForWriting.write(contentsBeforeFile.c_str(), sizeof(char) * contentsBeforeFile.length());
+		writeFileBlock(file, archiveForWriting);
+		archiveForWriting.write(restOfFile.c_str(), sizeof(char) * restLength);
+
+	}
+
 }
 
 
@@ -150,7 +335,6 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 	
 	if (std::filesystem::is_empty(directoryPath))
 	{
-		// what checkSum should i do for empty dirs?
 		isEmpty = true;
 		archive.write(reinterpret_cast<const char*>(&isEmpty), sizeof(bool));
 		return;
@@ -169,9 +353,9 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 			{
 				writeFileBlock(compressedCurrent, archive);
 			}
-			catch (std::ios_base::failure& e)
+			catch (const std::exception& e)
 			{
-				std::cerr << "Error with writing in the file" << e.what() << '\n';
+				std::cerr << "Error: " << e.what() << '\n';
 				return;
 			}
 		}
@@ -180,7 +364,14 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		{
 			std::filesystem::path newParent = file.path();
 			newParent = root / newParent.filename();
-			compressDirectory(newParent,file.path(), archive);
+			try
+			{
+				compressDirectory(newParent,file.path(), archive);
+			}
+			catch (const std::exception& e)
+			{
+				std::cerr << "Error: " << e.what() << '\n';
+			}
 		}
 	}
 }
@@ -196,7 +387,6 @@ void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 	archive.write(name.c_str(), sizeof(char) * nameLength);
 	archive.write(reinterpret_cast<const char*>(&isDir), sizeof(bool));
 	archive.write(reinterpret_cast<const char*>(&file.compressedPercentage), sizeof(uint16_t));
-	//std::cout << file.compressedPercentage << " ";
 	archive.write(reinterpret_cast<const char*>(&file.checkSum), sizeof(size_t));
 	archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
 	for (std::vector<uint16_t>::iterator ft = file.contents.begin(); ft != file.contents.end(); ft++)
@@ -280,7 +470,6 @@ void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::file
 std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstream& archive)
 {
 	if (!archive.is_open()) throw std::runtime_error("error with the archive!");
-	//archive.seekg(0, archive.beg);
 
 	while (!archive.eof())
 	{
@@ -290,41 +479,77 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 		name.resize(nameLength);
 		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
 
-		//std::cout << "After name read:" << archive.tellg() << '\n';
 		if (filePath.string() == name.c_str()) return archive.tellg();
 		bool isDir;
 		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
 		if (isDir)
 		{
-			try
-			{
-				archive.seekg(sizeof(bool), std::ios::cur);
-			}
-			catch (std::ios_base::failure& e)
-			{
-				std::cerr << "Error with seeking in the file" << e.what() << '\n';
-				return archive.end;
-			}
+			archive.seekg(sizeof(bool), std::ios::cur);
 		}
 		else
 		{
-			try
-			{
-				archive.seekg(sizeof(uint16_t), std::ios::cur); // skipping compressed percentage value
-				archive.seekg(sizeof(size_t), std::ios::cur); // skipping checkSum value
-				std::size_t contentLength;
-				archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
-				archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
-			}
-			catch (std::ios_base::failure& e)
-			{
-				std::cerr << "Error with seeking in the file" << e.what() << '\n';
-				return archive.end;
-			}
+			archive.seekg(sizeof(uint16_t), std::ios::cur); // skipping compressed percentage value
+			archive.seekg(sizeof(size_t), std::ios::cur); // skipping checkSum value
+			std::size_t contentLength;
+			archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+			archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
 		}
 
 	}
 
 
 	return archive.end;
+}
+
+std::size_t ArchiveHandler::findEndOfDir(std::string dirName, std::filesystem::path archivePath, std::ifstream& archive)
+{
+	if (!archive.is_open())
+		throw std::runtime_error("Error with opening the archive");
+
+	bool isEmpty;
+	archive.read(reinterpret_cast<char*>(&isEmpty), sizeof(bool));
+	if (isEmpty) return archive.tellg();
+
+	while (archive.tellg() != std::filesystem::file_size(archivePath))
+	{
+		std::size_t nameLength;
+		archive.read(reinterpret_cast<char*>(&nameLength), sizeof(size_t));
+		std::string name;
+		name.resize(nameLength);
+		archive.read(const_cast<char*>(name.c_str()), nameLength * sizeof(char));
+
+		if (name.substr(0, dirName.length()) != dirName)
+		{
+			archive.seekg(-sizeof(size_t) - sizeof(char) * nameLength, std::ios::cur);
+			return archive.tellg();
+		}
+		bool isDir;
+		archive.read(reinterpret_cast<char*>(&isDir), sizeof(bool));
+		if (isDir)
+		{
+			archive.seekg(sizeof(bool), std::ios::cur);
+		}
+		else
+		{
+			skipFileBlock(archive,archive.tellg());
+		}
+
+	}
+	return 0;
+}
+/**
+ * @brief - seeks over the contents of a file block
+ * @param archive - target file
+ * @param pos - position from which starts the content for skipping (after the name and isDir indicator)
+*/
+void ArchiveHandler::skipFileBlock(std::ifstream& archive,std::size_t pos)
+{
+	if (!archive.is_open())
+		throw std::runtime_error("Error with opening the archive");
+
+	archive.seekg(pos);
+	archive.seekg(sizeof(uint16_t) + sizeof(size_t), std::ios::cur);
+	std::size_t contentLength;
+	archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
+	archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur);
 }
