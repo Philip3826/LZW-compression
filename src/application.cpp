@@ -5,7 +5,6 @@
 #include <iostream>
 int main(int argc , char** argv)
 {
-	ArchiveHandler handler;
 	std::filesystem::path one("C:\\Users\\phili\\Desktop\\mc.txt");
 	std::filesystem::path two("C:\\Users\\phili\\Desktop\\themes.txt");
 	std::filesystem::path three("C:\\Users\\phili\\Desktop\\dump.txt");
@@ -23,9 +22,18 @@ int main(int argc , char** argv)
 	////handler.checkForCorruption(arch);
 	//handler.refreshFile(emp, "empty", arch);
 	//handler.extractArchive(ext, arch);
-	std::filesystem::path edno(argv[3]);
-	std::filesystem::path dve(argv[4]);
-	std::vector<std::filesystem::path> vv{ edno,dve };
-	handler.createArchive(argv[2], vv);
+	try
+	{
+		ActionHandler h(argc, argv);
+		h.executeAction();
+	}
+	catch (std::invalid_argument& i)
+	{
+		std::cout << i.what();
+	}
+	catch (std::exception& e)
+	{
+		std::cout << e.what();
+	}
 	return 0;
 }
