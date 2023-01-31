@@ -3,7 +3,7 @@
 #include "ArchiveHandler.h"
 #include "ActionHandler.h"
 #include <iostream>
-int main()
+int main(int argc , char** argv)
 {
 	ArchiveHandler handler;
 	std::filesystem::path one("C:\\Users\\phili\\Desktop\\mc.txt");
@@ -23,7 +23,9 @@ int main()
 	////handler.checkForCorruption(arch);
 	//handler.refreshFile(emp, "empty", arch);
 	//handler.extractArchive(ext, arch);
-	std::string h = "zip";
-	ActionHandler acc(h, "");
+	std::filesystem::path edno(argv[3]);
+	std::filesystem::path dve(argv[4]);
+	std::vector<std::filesystem::path> vv{ edno,dve };
+	handler.createArchive(argv[2], vv);
 	return 0;
 }

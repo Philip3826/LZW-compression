@@ -7,7 +7,7 @@
       "inheritEnvironments": [ "msvc_x64_x64" ],
       "buildRoot": "${projectDir}\\out\\build\\${name}",
       "installRoot": "${projectDir}\\out\\install\\${name}",
-      "cmakeCommandArgs": "",
+      "cmakeCommandArgs": "zip \"C:\\Users\\phili\\Desktop\\new.txt\" \"C:\\Users\\phili\\Desktop\\mc.txt\" \"C:\\Users\\phili\\Desktop\\dump.txt\"",
       "buildCommandArgs": "",
       "ctestCommandArgs": ""
     }

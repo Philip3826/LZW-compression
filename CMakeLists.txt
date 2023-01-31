@@ -1,6 +1,6 @@
 cmake_minimum_required (VERSION 3.13)
 
-project ("Simple CMake Template" VERSION 1.0)
+project ("LZW Compression" VERSION 1.0)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -30,7 +30,7 @@ target_sources(
 # Executable target for the application
 add_executable(application)
 
-set_target_properties(application PROPERTIES OUTPUT_NAME "calc")
+set_target_properties(application PROPERTIES OUTPUT_NAME "app")
 
 target_link_libraries(
 	application

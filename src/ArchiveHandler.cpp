@@ -488,11 +488,7 @@ std::size_t ArchiveHandler::findFile(std::filesystem::path filePath, std::ifstre
 		}
 		else
 		{
-			archive.seekg(sizeof(uint16_t), std::ios::cur); // skipping compressed percentage value
-			archive.seekg(sizeof(size_t), std::ios::cur); // skipping checkSum value
-			std::size_t contentLength;
-			archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
-			archive.seekg(contentLength * sizeof(uint16_t), std::ios::cur); // skipping content
+			skipFileBlock(archive, archive.tellg());
 		}
 
 	}
