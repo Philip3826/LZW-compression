@@ -1,5 +1,9 @@
 #include "ArchiveHandler.h"
-
+/**
+ * @brief - creates an archive in a single file
+ * @param newArchivePath - path to the archive file
+ * @param files - list of files to be compressed
+*/
 void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::vector<std::filesystem::path> files)
 {
 	std::ofstream archive(newArchivePath, std::ios::binary | std::ios::trunc);
@@ -33,7 +37,11 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 		}
 	}
 }
-
+/**
+ * @brief - decompressed the whole archive into the files it was built from
+ * @param destination - where the decompressed files will go ( must be a directory)
+ * @param archivePath - path to the archive
+*/
 void ArchiveHandler::extractArchive(std::filesystem::path destination, std::filesystem::path archivePath)
 {
 	std::ifstream archive(archivePath, std::ios::binary);
@@ -57,7 +65,7 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
 			{
 				std::filesystem::path newDir = destination / pathInArchive.filename();
 				std::filesystem::create_directory(newDir);
-				unzipDirectory(newDir, pathInArchive, archive);
+				unzipDirectory(newDir, pathInArchive, archive, fileSize);
 			}
 			else
 			{
@@ -86,8 +94,9 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
  * @param archive - archive which we will be searching and extracting the file from
  * @param destination - where we will store the decompressed file
 */
-void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstream& archive,std::filesystem::path destination)
+void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::filesystem::path archivePath,std::filesystem::path destination)
 {
+	std::ifstream archive(archivePath, std::ios::binary);
 	if (!archive.is_open()) throw std::runtime_error("Error with the compression");
 	try
 	{
@@ -114,7 +123,7 @@ void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstrea
 		std::filesystem::create_directory(newDir);
 		try
 		{
-			unzipDirectory(newDir,pathInArchive,archive); // add arg
+			unzipDirectory(newDir,pathInArchive,archive,std::filesystem::file_size(archivePath)); // add arg
 		}
 		catch (const std::exception& e)
 		{
@@ -143,7 +152,10 @@ void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::ifstrea
 		}
 	}
 }
-
+/**
+ * @brief - prints info about the structure of the archive as well as how well the files are compressed
+ * @param archivePath 
+*/
 void ArchiveHandler::printInfo(std::filesystem::path archivePath)
 {
 	std::ifstream archive(archivePath, std::ios::binary);
@@ -232,7 +244,12 @@ void ArchiveHandler::checkForCorruption(std::filesystem::path archivePath)
 
 	if (noCorruptions) std::cout << "File is good" << std::endl;
 }
-
+/**
+ * @brief - replaces a file in the archive with a new one or a directory with a new directory
+ * @param newFile  - path to the new file for compression
+ * @param pathInArchive - path to the file for replacement in the archive
+ * @param archivePath - path to the archive
+*/
 void ArchiveHandler::refreshFile(std::filesystem::path newFile, std::filesystem::path pathInArchive, std::filesystem::path archivePath)
 {
 	std::ifstream archiveForReading(archivePath, std::ios::binary);
@@ -311,6 +328,7 @@ void ArchiveHandler::refreshFile(std::filesystem::path newFile, std::filesystem:
 			throw std::runtime_error("Error with opening the archive");
 
 		archiveForWriting.write(contentsBeforeFile.c_str(), sizeof(char) * contentsBeforeFile.length());
+		file.filePath = pathInArchive.parent_path() / file.filePath.filename();
 		writeFileBlock(file, archiveForWriting);
 		archiveForWriting.write(restOfFile.c_str(), sizeof(char) * restLength);
 
@@ -319,7 +337,12 @@ void ArchiveHandler::refreshFile(std::filesystem::path newFile, std::filesystem:
 }
 
 
- // TO DO : change argument root name
+/**
+ * @brief - compressed  a single directory and writes it into an archive
+ * @param root - path in the archive of a particular file. Example: if we are compressing the folder ..\..\folder\file.txt in the archive we will write \foldrer\file.txt
+ * @param directoryPath - path to the directory we want to compress
+ * @param archive - archive we will write the directory in 
+*/
 void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesystem::path directoryPath , std::ofstream& archive)
 {
 	if (!archive.is_open())
@@ -375,7 +398,11 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		}
 	}
 }
-// To do : add compressed percentage
+/**
+ * @brief - writes a file content into an archive
+ * @param file - file kept in Lzw format ready for writing
+ * @param archive - archive we will write in
+*/
 void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 {
 	std::string name = file.filePath.string();
@@ -411,16 +438,18 @@ LzwFile ArchiveHandler::readFileBlock(std::filesystem::path filePath,std::ifstre
 	{
 		archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
 	}
-	return LzwFile(filePath, 0, compressedContents, checkSum);
+	return LzwFile(filePath, comprPerc, compressedContents, checkSum);
 }
 
-void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::filesystem::path pathInFolder, std::ifstream& archive)
+void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::filesystem::path pathInFolder, std::ifstream& archive,std::size_t archiveSize)
 {
+	if (!archive.is_open())
+		throw std::runtime_error("Error opening the archive!");
 	bool isEmpty;
 	archive.read(reinterpret_cast<char*>(&isEmpty), sizeof(bool));
 	if (isEmpty) return;
 	
-	while (!archive.eof())
+	while (archive.tellg() != archiveSize)
 	{
 		std::size_t nameLength;
 		std::string name;
@@ -441,7 +470,7 @@ void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::file
 		{
 			std::filesystem::path newDir = destination / pathInArchive.filename();
 			std::filesystem::create_directory(newDir);
-			unzipDirectory(newDir, pathInFolder / pathInArchive.filename(), archive); 
+			unzipDirectory(newDir, pathInFolder / pathInArchive.filename(), archive,archiveSize); 
 		}
 		else
 		{

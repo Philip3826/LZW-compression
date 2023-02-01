@@ -6,7 +6,7 @@
 
 class ActionHandler {
 public:
-	ActionHandler(int argc, char** argv);
+	ActionHandler()  = default;
 	~ActionHandler() = default;
 	ActionHandler(const ActionHandler& other) = delete;
 	ActionHandler& operator = (const ActionHandler& other) = delete;
@@ -15,16 +15,18 @@ public:
 	{
 		ZIP,
 		UNZIP,
-		INFO,
+		FILEINFO,
 		REFRESH,
 		EC,
 		ERROR,
 	};
+	void parseCommand(std::string command);
+	void validateArguments(int argc, char** argv);
+	Action getAction() const;
 private:
 	std::filesystem::path archivePath{""};
 	std::vector <std::filesystem::path> arguments;
 	Action action{ Action::ERROR };
 	ArchiveHandler handler;
-	void validateArguments(int argc, char** argv);
 	
 };
