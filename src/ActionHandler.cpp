@@ -57,53 +57,56 @@ void ActionHandler::parseCommand(std::string command)
 		action = Action::EC;
 }
 
-void ActionHandler::validateArguments(int argc, char** argv)
+void ActionHandler::validateArguments(std::vector<std::string> argv)
 {
-	if (argc < 3)
+	if (argv.size() == 0)
 		throw std::invalid_argument("Provide enough arguments. Check Usage: ");
 
 
-	archivePath = *(argv + 2);
+	archivePath = argv[0];
 	if (archivePath.extension() != ".lzw")
 		throw std::invalid_argument("Please provide valid file for archive. Check Usage: ");
 
 	switch (action)
 	{
 	case ActionHandler::Action::ZIP: {
-		if (argc < 4) throw std::invalid_argument("Provide enough arguments for zip command. Check Usage:");
+		if (argv.size() < 2) throw std::invalid_argument("Provide enough arguments for zip command. Check Usage:");
 
-		for (int i = 3; i < argc; i++)
+		for (int i = 1; i < argv.size(); i++)
 		{
-			arguments.push_back(std::filesystem::path(*(argv + i)));
+			arguments.push_back(std::filesystem::path(argv[i]));
 		}
 
-	}
-								   break;
+	}break;
+
 	case ActionHandler::Action::UNZIP: {
-		if (argc < 4) throw std::invalid_argument("Provide enough arguments for unzip command. Check Usage:");
+		if (argv.size() < 2) throw std::invalid_argument("Provide enough arguments for unzip command. Check Usage:");
 		
-		if (argc > 4)
+		if (argv.size() > 2)
 		{
-			for (int i = 4; i < argc; i++)
+			for (int i = 2; i < argv.size(); i++)
 			{
-				arguments.push_back(std::filesystem::path(*(argv + i)));
+				arguments.push_back(std::filesystem::path(argv[i]));
 			}
 		}
-		arguments.push_back(std::filesystem::path(*(argv + 3)));
+		arguments.push_back(std::filesystem::path(argv[1]));
 	}
 									 break;
 	case ActionHandler::Action::FILEINFO: {
-		if (argc >= 4) throw std::invalid_argument("Too much arguments for FILEINFO command. Check Usage:");
+		if (argv.size() >= 2) throw std::invalid_argument("Too much arguments for FILEINFO command. Check Usage:");
 	}
 									break;
 	case ActionHandler::Action::REFRESH: {
-		if (argc != 5) throw std::invalid_argument("Need exactly 4 arguments for refresh command. Check Usage:");
+		if (argv.size() != 3) throw std::invalid_argument("Need exactly 4 arguments for refresh command. Check Usage:");
 
-		arguments.push_back(std::filesystem::path(*(argv + 3)));
-		arguments.push_back(std::filesystem::path(*(argv + 4)));
+		arguments.push_back(std::filesystem::path(argv[1]));
+		arguments.push_back(std::filesystem::path(argv[2]));
 
 	}
 									   break;
+	case ActionHandler::Action::EC: {
+		if(argv.size() >= 2) throw std::invalid_argument("Too much arguments for EC command. Check Usage:");
+	}	break;
 	case ActionHandler::Action::ERROR: {
 		throw std::invalid_argument("Invalid command. Check Usage:");
 	}

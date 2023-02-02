@@ -12,7 +12,7 @@ void ArchiveHandler::createArchive(std::filesystem::path newArchivePath, std::ve
 		if (std::filesystem::is_regular_file(file))
 		{
 			LzwFile compressedCurrent(file);
-			compressedCurrent.filePath = compressedCurrent.filePath.filename();
+			compressedCurrent.setFilePath(compressedCurrent.getFilePath().filename());
 			try 
 			{
 				writeFileBlock(compressedCurrent, archive);
@@ -70,7 +70,7 @@ void ArchiveHandler::extractArchive(std::filesystem::path destination, std::file
 			else
 			{
 				LzwFile file = readFileBlock(pathInArchive, archive);
-				std::string decompressed = file.comp.decompress(file.contents);
+				std::string decompressed = file.comp.decompress(file.getContents());
 				std::filesystem::path newAddress = destination / pathInArchive.filename();
 				std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
 				if (newFile.good())
@@ -136,7 +136,7 @@ void ArchiveHandler::unzipFile(std::filesystem::path pathInArchive, std::filesys
 		try
 		{
 			LzwFile file = readFileBlock(pathInArchive, archive);
-			std::string decompressed = file.comp.decompress(file.contents);
+			std::string decompressed = file.comp.decompress(file.getContents());
 			std::filesystem::path newAddress = destination / pathInArchive.filename();
 			std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
 			if (newFile.good())
@@ -328,7 +328,7 @@ void ArchiveHandler::refreshFile(std::filesystem::path newFile, std::filesystem:
 			throw std::runtime_error("Error with opening the archive");
 
 		archiveForWriting.write(contentsBeforeFile.c_str(), sizeof(char) * contentsBeforeFile.length());
-		file.filePath = pathInArchive.parent_path() / file.filePath.filename();
+		file.setFilePath(pathInArchive.parent_path() / file.getFilePath().filename());
 		writeFileBlock(file, archiveForWriting);
 		archiveForWriting.write(restOfFile.c_str(), sizeof(char) * restLength);
 
@@ -371,7 +371,7 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 		if (std::filesystem::is_regular_file(file))
 		{
 			LzwFile compressedCurrent(file);
-			compressedCurrent.filePath = root / compressedCurrent.filePath.filename();
+			compressedCurrent.setFilePath(root / compressedCurrent.getFilePath().filename());
 			try
 			{
 				writeFileBlock(compressedCurrent, archive);
@@ -405,18 +405,21 @@ void ArchiveHandler::compressDirectory(std::filesystem::path root , std::filesys
 */
 void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 {
-	std::string name = file.filePath.string();
+	std::string name = file.getFilePath().string();
 	std::size_t nameLength = name.length();
-	std::size_t compressedLength = file.contents.size();
+	std::size_t compressedLength = file.getContents().size();
+	uint16_t percentage = file.getPercentage();
+	std::size_t checksum = file.getCheckSum();
+	std::vector<uint16_t> contents = file.getContents();
 	bool isDir = false;
 	
 	archive.write(reinterpret_cast<const char*>(&nameLength), sizeof(size_t));
 	archive.write(name.c_str(), sizeof(char) * nameLength);
 	archive.write(reinterpret_cast<const char*>(&isDir), sizeof(bool));
-	archive.write(reinterpret_cast<const char*>(&file.compressedPercentage), sizeof(uint16_t));
-	archive.write(reinterpret_cast<const char*>(&file.checkSum), sizeof(size_t));
+	archive.write(reinterpret_cast<const char*>(&percentage), sizeof(uint16_t));
+	archive.write(reinterpret_cast<const char*>(&checksum), sizeof(size_t));
 	archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
-	for (std::vector<uint16_t>::iterator ft = file.contents.begin(); ft != file.contents.end(); ft++)
+	for (std::vector<uint16_t>::iterator ft = contents.begin(); ft != contents.end(); ft++)
 	{
 		archive.write(reinterpret_cast<const char*>(&*ft), sizeof(uint16_t));
 	}
@@ -475,7 +478,7 @@ void ArchiveHandler::unzipDirectory(std::filesystem::path destination, std::file
 		else
 		{
 			LzwFile file = readFileBlock(pathInArchive, archive);
-			std::string decompressed = file.comp.decompress(file.contents);
+			std::string decompressed = file.comp.decompress(file.getContents());
 			std::filesystem::path newAddress = destination / pathInArchive.filename();
 			std::ofstream newFile(newAddress, std::ios::binary | std::ios::trunc);
 			if (newFile.good())

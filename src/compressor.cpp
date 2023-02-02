@@ -4,9 +4,12 @@
  * @param filePath - path to the file we want to compress
  * @return - vector containing the compressed content in the form of coded uint16_t numbers
 */
-std::vector<uint16_t> Compressor::compress(std::filesystem::path filePath)
+std::vector<uint16_t> Compressor::compress(std::string fileContents)
 {
-	std::string fileContents = readFileContents(filePath);
+	if (fileContents.empty())
+	{
+		return std::vector<uint16_t>();
+	}
 	std::unordered_map<std::string, uint16_t> dictionary;
 	initializeDictionary(dictionary);
 	uint16_t nextKey = 256;
@@ -44,7 +47,10 @@ std::vector<uint16_t> Compressor::compress(std::filesystem::path filePath)
 */
 std::string Compressor::decompress(std::vector<uint16_t> compressedContent)
 {
-	
+	if (compressedContent.empty())
+	{
+		return std::string();
+	}
 	std::unordered_map<uint16_t, std::string> dictionary;
 	initializeDecompressDictionary(dictionary);
 	uint16_t current = compressedContent[0];
@@ -69,18 +75,8 @@ std::string Compressor::decompress(std::vector<uint16_t> compressedContent)
 	}
 	return decompressedContent;
 }
-/**
- * @brief - reads a file byte by byte and stores the contents in a string
- * @param filePath  - path of the target file 
- * @return  contents of the file stored in a string
-*/
-std::string Compressor::readFileContents(std::filesystem::path filePath)
-{
-	std::ifstream file(filePath, std::ios::binary);
-	std::string fileContents(std::istreambuf_iterator<char>{file}, {});
 
-	return fileContents;
-}
+
 /**
  * @brief - initalizes the ascii table into the dictionary used for compression
  * @param dictionary  - dictionary used in the compression

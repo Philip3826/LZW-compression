@@ -21,7 +21,7 @@ public:
 		ERROR,
 	};
 	void parseCommand(std::string command);
-	void validateArguments(int argc, char** argv);
+	void validateArguments(std::vector<std::string> arguments);
 	Action getAction() const;
 private:
 	std::filesystem::path archivePath{""};

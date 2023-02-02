@@ -17,11 +17,11 @@ int main(int argc , char** argv)
 	//std::filesystem::path ext("C:\\Users\\phili\\Desktop\\extract");
 
 	//std::vector<std::filesystem::path> v{one,two,three,emp,four,five,six};
-	////handler.createArchive(arch, v);
-	//////handler.unzipFile("empty", archive, ext); //error when searching folders
-	////handler.printInfo(arch);
-	//////handler.checkForCorruption(arch);
-	//handler.extractArchive(ext, arch);
+	//handler.createArchive(arch, v);
+	//handler.unzipFile("empty", arch, ext); //error when searching folders
+	//handler.printInfo(arch);
+	//handler.checkForCorruption(arch);
+	//handler.extractArchive("C:\\Users\\phili\\Desktop\\ext2", arch);
 	std::string usage = "1.To archive files please input : ./app.exe zip address\\to\\archive.lzw [address\\to\\file]\n\
 2.To decompress files from an archive please input: ./app.exe unzip address\\to\\archive.lzw address\\to\\unzip\\destination [address\\in\\archive\\to\\file]\n\
 3.To decompress the whole archive please input: ./app.exe unzip address\\to\\archive.lzw address\\to\\unzip\\destination\n\
@@ -35,12 +35,12 @@ int main(int argc , char** argv)
 		std::cout << usage;
 		return 1;
 	}
-
+	std::vector<std::string> arguments(argv + 2, argv + argc);
+	std::string command = *(argv + 1);
 	try
 	{
-		std::string command = *(argv + 1);
 		handler.parseCommand(command);
-		handler.validateArguments(argc, argv);
+		handler.validateArguments(arguments);
 		handler.executeAction();
 	}
 	catch (std::invalid_argument& i)
@@ -52,5 +52,6 @@ int main(int argc , char** argv)
 	{
 		std::cout << e.what();
 	}
+
 	return 0;
 }
