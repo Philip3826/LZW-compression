@@ -419,10 +419,11 @@ void ArchiveHandler::writeFileBlock(LzwFile file, std::ofstream& archive)
 	archive.write(reinterpret_cast<const char*>(&percentage), sizeof(uint16_t));
 	archive.write(reinterpret_cast<const char*>(&checksum), sizeof(size_t));
 	archive.write(reinterpret_cast<const char*>(&compressedLength), sizeof(size_t));
-	for (std::vector<uint16_t>::iterator ft = contents.begin(); ft != contents.end(); ft++)
+	/*for (std::vector<uint16_t>::iterator ft = contents.begin(); ft != contents.end(); ft++)
 	{
 		archive.write(reinterpret_cast<const char*>(&*ft), sizeof(uint16_t));
-	}
+	}*/
+	archive.write(reinterpret_cast<const char*>(contents.data()), sizeof(uint16_t) * contents.size());
 }
 
 
@@ -436,11 +437,7 @@ LzwFile ArchiveHandler::readFileBlock(std::filesystem::path filePath,std::ifstre
 	archive.read(reinterpret_cast<char*>(&checkSum), sizeof(size_t));
 	archive.read(reinterpret_cast<char*>(&contentLength), sizeof(size_t));
 	std::vector<uint16_t> compressedContents(contentLength);
-
-	for (std::vector<uint16_t>::iterator ft = compressedContents.begin(); ft != compressedContents.end() ; ft++)
-	{
-		archive.read(reinterpret_cast<char*>(&*ft), sizeof(uint16_t));
-	}
+	archive.read(reinterpret_cast<char*>(compressedContents.data()), sizeof(uint16_t) * contentLength);
 	return LzwFile(filePath, comprPerc, compressedContents, checkSum);
 }
 
@@ -548,7 +545,8 @@ std::size_t ArchiveHandler::findEndOfDir(std::string dirName, std::filesystem::p
 
 		if (name.substr(0, dirName.length()) != dirName)
 		{
-			archive.seekg(-sizeof(size_t) - sizeof(char) * nameLength, std::ios::cur);
+			long long int offset = sizeof(char) * nameLength + sizeof(size_t);
+			archive.seekg(-offset, std::ios::cur);
 			return archive.tellg();
 		}
 		bool isDir;

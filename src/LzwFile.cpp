@@ -1,4 +1,5 @@
 #include "LzwFile.h"
+
 /**
  * @brief - reads a file byte by byte and stores the contents in a string
  * @param filePath  - path of the target file
@@ -12,7 +13,12 @@ std::string LzwFile::readFileContents(std::filesystem::path filePath)
 	try
 	{
 		file.open(filePath, std::ios::binary);
-		std::string buffer(std::istreambuf_iterator<char>{file}, {});
+		std::size_t fileSize = std::filesystem::file_size(filePath);
+		//std::string buffer(std::istreambuf_iterator<char>{file}, {});
+		std::string buffer;
+		buffer.resize(fileSize+1);
+		file.read(buffer.data(), sizeof(char) * fileSize);
+		buffer[fileSize] = '\0';
 		fileContents = buffer;
 	}
 	catch (const std::exception& e)

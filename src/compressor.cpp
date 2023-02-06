@@ -13,13 +13,19 @@ std::vector<uint16_t> Compressor::compress(std::string fileContents)
 	std::unordered_map<std::string, uint16_t> dictionary;
 	initializeDictionary(dictionary);
 	uint16_t nextKey = 256;
-	std::string currStr = std::string(1,fileContents[0]);
+	std::string currStr(1,fileContents[0]); 
 	std::vector<uint16_t> compressedContents;
 	std::size_t totalSum = 0;
+	std::string buffer;
+	buffer.resize(100);
 	for (std::string::iterator it = fileContents.begin() + 1; it != fileContents.end(); it++)
 	{
-		std::string buffer = currStr + *it;
-		if (dictionary.contains(buffer)) currStr += *it;
+		buffer.clear();
+		buffer = currStr + *it;
+		if (dictionary.contains(buffer)) {
+			
+			std::swap(buffer, currStr);
+		}
 		else
 		{
 			 auto output = dictionary.find(currStr);
@@ -56,8 +62,8 @@ std::string Compressor::decompress(std::vector<uint16_t> compressedContent)
 	uint16_t current = compressedContent[0];
 	uint16_t code = 256;
 	std::string decompressedContent;
-	std::string translation = dictionary.find(current)->second;
-	decompressedContent += translation;
+	std::string oldTranslation = dictionary.find(current)->second; // changed name 
+	decompressedContent += oldTranslation;
 
 	for (std::vector<uint16_t>::iterator it = compressedContent.begin() + 1; it != compressedContent.end(); it++)
 	{
@@ -66,10 +72,10 @@ std::string Compressor::decompress(std::vector<uint16_t> compressedContent)
 		auto keyValuePair = dictionary.find(current);
 
 		if (keyValuePair != dictionary.end()) translationResult = keyValuePair->second;
-		else translationResult = translation + translation[0]; // in case we encounter a code not yet in the dict
+		else translationResult = oldTranslation + oldTranslation[0]; // in case we encounter a code not yet in the dict
 
-		dictionary.insert({ code++, translation + translationResult[0] });
-		translation = translationResult;
+		dictionary.insert({ code++, oldTranslation + translationResult[0] });
+		oldTranslation = translationResult;
 		decompressedContent += translationResult;
 		
 	}
